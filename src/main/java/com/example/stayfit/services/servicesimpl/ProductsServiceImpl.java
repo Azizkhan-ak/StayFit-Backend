@@ -1,5 +1,6 @@
-package com.example.stayfit.services;
+package com.example.stayfit.services.servicesimpl;
 
+import com.example.stayfit.services.ProductsService;
 import com.example.stayfit.utility.Constants;
 import com.example.stayfit.utility.QueryUtil;
 import com.example.stayfit.dbconfig.PostgresQlConfig;
@@ -15,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class ProductsServiceImpl implements ProductsService{
+public class ProductsServiceImpl implements ProductsService {
 
     PostgresQlConfig postgresQlConfig;
 

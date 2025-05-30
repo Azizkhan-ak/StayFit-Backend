@@ -17,4 +17,5 @@ public class Product {
     private Float discountInPercent;
     private Integer itemsInStock;
     private String imgUrl;
+    private Integer quantity;
 }
