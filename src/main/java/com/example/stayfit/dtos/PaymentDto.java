@@ -7,8 +7,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class PayementDto {
-    private String payementIntentId;
+public class PaymentDto {
+    private String paymentIntentId;
     private Float amount;
     private String created;
     private String currency;

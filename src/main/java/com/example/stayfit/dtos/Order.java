@@ -21,5 +21,5 @@ public class Order {
     private String paymentMethod;
     private Integer userId;
     List<Product> products;
-    PayementDto payementDto;
+    PaymentDto paymentDto;
 }

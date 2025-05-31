@@ -1,0 +1,72 @@
+package com.example.stayfit.security;
+
+import com.example.stayfit.aws.EmailHandler;
+import com.example.stayfit.dbconfig.PostgresQlConfig;
+import com.example.stayfit.utility.Constants;
+import com.example.stayfit.utility.QueryUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.Collections;
+
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    PostgresQlConfig postgresQlConfig;
+    EmailHandler emailHandler;
+
+    @Autowired
+    public UserDetailsServiceImpl(PostgresQlConfig postgresQlConfig,EmailHandler emailHandler){
+        this.emailHandler = emailHandler;
+        this.postgresQlConfig = postgresQlConfig;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+
+        Connection connection = null;
+        Statement statement = null;
+        ResultSet resultSet = null;
+
+        try{
+            connection = postgresQlConfig.getConnection();
+            statement = connection.createStatement();
+
+            String queryToUserByEmail = QueryUtil.getUserByEmailQuery(username);
+            resultSet = statement.executeQuery(queryToUserByEmail);
+
+            if(resultSet.next()){
+                String userName = resultSet.getString(1);
+                String password = resultSet.getString(2);
+                // You can return roles too — using Collections.singleton() for now
+                return new User(userName, password, Collections.emptyList());
+            }
+            else {
+                throw new UsernameNotFoundException("User not found with email: " + username);
+            }
+
+        }catch (Exception ex){
+            ex.printStackTrace();
+            throw new UsernameNotFoundException("User not found with email: " + username);
+        }
+        finally {
+            try{
+                if(resultSet!=null)
+                    resultSet.close();
+                if(statement!=null)
+                    statement.close();
+                if(resultSet!=null)
+                    resultSet.close();
+            }catch (Exception ex){
+                ex.printStackTrace();
+            }
+        }
+    }
+}

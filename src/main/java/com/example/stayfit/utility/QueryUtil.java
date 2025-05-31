@@ -1,8 +1,10 @@
 package com.example.stayfit.utility;
 
 import com.example.stayfit.dtos.Order;
-import com.example.stayfit.dtos.PayementDto;
+import com.example.stayfit.dtos.PaymentDto;
 import com.example.stayfit.dtos.Product;
+import com.example.stayfit.dtos.UserDto;
+import org.apache.catalina.User;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -28,15 +30,28 @@ public class QueryUtil {
         StringBuilder insertQuery = new StringBuilder("INSERT INTO public.order_details (order_id,product_id,quantity)" +
                 "VALUES  ");
         for(Product product: productList){
-            insertQuery.append("(").append(orderId).append(product.getId()).append(product.getQuantity()).append("),");
+            insertQuery.append("(").append(orderId).append(",").append(product.getId()).append(",").append(product.getQuantity()).append("),");
         }
         insertQuery = insertQuery.deleteCharAt(insertQuery.length()-1);
         return insertQuery.toString();
     }
 
-    public static String getInsertOrderBillingQuery(PayementDto payementDto,Long orderId){
+    public static String getInsertOrderBillingQuery(PaymentDto payementDto,Long orderId){
         String insertQuery  = "INSERT INTO public.order_billing (bill_payed_at,amount_payed,currency,order_id,payment_intent_id)" +
-                "values ('"+Timestamp.valueOf(payementDto.getCreated())+"',"+payementDto.getAmount()+",'"+payementDto.getCurrency()+"',"+orderId+",'"+payementDto.getPayementIntentId()+"') ";
+                "values ('"+new Timestamp(Long.valueOf(payementDto.getCreated())*1000)+"',"+payementDto.getAmount()+",'"+payementDto.getCurrency()+"',"+orderId+",'"+payementDto.getPaymentIntentId()+"') ";
         return insertQuery;
     }
+
+    public static String getUpdateProductStockQuery(Product product){
+        return "UPDATE public.products set items_in_stock = items_in_stock - "+product.getQuantity()+" where id = "+product.getId()+" and status = 1 ";
+    }
+
+    public static String getCheckIfEmailAlreadyExists(String email){
+        return "SELECT * from public.users where email = '"+email+"' and status !=6 ";
+    }
+
+    public static String getUserByEmailQuery(String email){
+        return "SELECT EMAIL,PASSWORD,ROLE FROM public.users where email = '"+email.trim().replaceAll("'","''")+"' and status != "+UserStatus.DELETED.getCode();
+    }
+
 }
