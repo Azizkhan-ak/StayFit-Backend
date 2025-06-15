@@ -29,7 +29,7 @@ public class SecurityConfig {
         return http
                 .csrf().disable()
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/public/**").permitAll() // public endpoints
+                        .requestMatchers("api/public/**").permitAll() // public endpoints
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

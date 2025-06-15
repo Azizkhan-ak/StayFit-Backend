@@ -47,11 +47,26 @@ public class QueryUtil {
     }
 
     public static String getCheckIfEmailAlreadyExists(String email){
-        return "SELECT * from public.users where email = '"+email+"' and status !=6 ";
+        return "SELECT id,email,status,first_name from public.users where email = '"+email+"' and status !=6 ";
     }
 
     public static String getUserByEmailQuery(String email){
-        return "SELECT EMAIL,PASSWORD,ROLE FROM public.users where email = '"+email.trim().replaceAll("'","''")+"' and status != "+UserStatus.DELETED.getCode();
+        return "SELECT EMAIL,PASSWORD,ROLE FROM public.users where email = '"+email.trim().replaceAll("'","''")+"' and status = "+UserStatus.ACTIVE.getCode();
+    }
+
+    public static String getInsertIntoEmailVerificationQuery(String email,String token){
+        return "INSERT into public.email_verification_tokens (email,token) values ('"+email+"','"+token+"')";
+    }
+
+    public static String getVerifyEmailQuery(){
+        return "update public.email_verification_tokens \n" +
+                "set is_used = true , verified_at  = current_timestamp \n" +
+                "where \"token\"  = ?\n" +
+                "and expires_at > current_timestamp ";
+    }
+
+    public static String getActivateUserQuery(){
+        return "update public.users set status = ? where email = ? and status != ?";
     }
 
 }
