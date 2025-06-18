@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("products.json")
+@RequestMapping("/api/public/products.json")
 @CrossOrigin("http://localhost:5173")
 public class ProductController {
 

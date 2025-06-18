@@ -1,34 +1,31 @@
-package com.example.stayfit.security;
+package com.example.stayfit.services.servicesimpl;
 
 import com.example.stayfit.aws.EmailHandler;
 import com.example.stayfit.dbconfig.PostgresQlConfig;
 import com.example.stayfit.dtos.ResponseDto;
 import com.example.stayfit.dtos.UserDto;
-import com.example.stayfit.utility.Constants;
-import com.example.stayfit.utility.QueryUtil;
-import com.example.stayfit.utility.URLs;
-import com.example.stayfit.utility.UserStatus;
+import com.example.stayfit.security.JwtUtil;
+import com.example.stayfit.services.AuthenticationService;
+import com.example.stayfit.utility.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Service;
 
-import javax.validation.Valid;
 import java.sql.*;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.UUID;
 
-@RestController
-@RequestMapping("/api")
-@CrossOrigin("http://localhost:5173")
+@Service
 @Slf4j
-public class AuthenticationController {
+public class AuthenticationServiceImpl implements AuthenticationService {
 
     private JwtUtil jwtUtil;
     private PasswordEncoder passwordEncoder;
@@ -37,7 +34,7 @@ public class AuthenticationController {
     private EmailHandler emailHandler;
 
     @Autowired
-    AuthenticationController(JwtUtil jwtUtil, PasswordEncoder passwordEncoder, PostgresQlConfig postgresQlConfig, AuthenticationManager authenticationManager, EmailHandler emailHandler) {
+    AuthenticationServiceImpl(JwtUtil jwtUtil, PasswordEncoder passwordEncoder, PostgresQlConfig postgresQlConfig, AuthenticationManager authenticationManager, EmailHandler emailHandler) {
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
         this.postgresQlConfig = postgresQlConfig;
@@ -45,24 +42,24 @@ public class AuthenticationController {
         this.emailHandler = emailHandler;
     }
 
-    @PostMapping("public/login")
-    public ResponseEntity<?> login(@RequestBody UserDto request) {
+
+    @Override
+    public ResponseDto login(UserDto userDto) {
         try {
             Authentication auth = authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(userDto.getEmail(), userDto.getPassword())
             );
             UserDetails user = (UserDetails) auth.getPrincipal();
-            String token = jwtUtil.generateToken(user.getUsername());
-            return ResponseEntity.ok(token);
+            Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
+            String token = jwtUtil.generateToken(user.getUsername(),authorities.iterator().next().getAuthority());
+            return new ResponseDto(Constants.successMessage,token,true);
         } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
+            return new ResponseDto("Invalid Credentials",null,false);
         }
     }
 
-
-    @PostMapping("public/register")
-    public ResponseDto register(@Valid @RequestBody UserDto request) throws Exception {
-
+    @Override
+    public ResponseDto register(UserDto userDto) {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
@@ -88,17 +85,17 @@ public class AuthenticationController {
                     """;
 
             String token = UUID.randomUUID().toString();
-            String username = request.getFirstName();
-            String verificationLink = String.format(URLs.verfiyEmailUrl,token,request.getEmail());
+            String username = userDto.getFirstName();
+            String verificationLink = String.format(URLs.verfiyEmailUrl,token,userDto.getEmail());
             String htmlBody = String.format(htmlTemplate, username, verificationLink, verificationLink, verificationLink);
-            String insertIntoEmailVerificationTokens = QueryUtil.getInsertIntoEmailVerificationQuery(request.getEmail(),token );
+            String insertIntoEmailVerificationTokens = QueryUtil.getInsertIntoEmailVerificationQuery(userDto.getEmail(),token );
 
             connection = postgresQlConfig.getConnection();
             connection.setAutoCommit(false);
-            preparedStatement = connection.prepareStatement(QueryUtil.getCheckIfEmailAlreadyExists(request.getEmail()));
+            preparedStatement = connection.prepareStatement(QueryUtil.getCheckIfEmailAlreadyExists(userDto.getEmail()));
             resultSet = preparedStatement.executeQuery();
             if(resultSet.next()){
-                if(resultSet.getInt(3)==UserStatus.INACTIVE.getCode()){
+                if(resultSet.getInt(3)== UserStatus.INACTIVE.getCode()){
                     //user is inactive, need to resend verification link to verify
                     preparedStatement = connection.prepareStatement(insertIntoEmailVerificationTokens);
                     preparedStatement.executeUpdate();
@@ -116,21 +113,21 @@ public class AuthenticationController {
                 ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
                 ps.setInt(2, UserStatus.INACTIVE.getCode());
                 ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
-                ps.setInt(4, 0); // 0 role for customer
-                ps.setString(5, request.getFirstName());
-                ps.setString(6, request.getLastName());
-                ps.setString(7, request.getEmail());
-                ps.setString(8, passwordEncoder.encode(request.getPassword()));
-                ps.setString(9, request.getCity());
-                ps.setString(10, request.getCountry());
-                ps.setString(11, request.getAddress());
-                ps.setString(12, request.getPhone());
+                ps.setInt(4, UserRole.CUSTOMER.getCode()); // 0 role for customer
+                ps.setString(5, userDto.getFirstName());
+                ps.setString(6, userDto.getLastName());
+                ps.setString(7, userDto.getEmail());
+                ps.setString(8, passwordEncoder.encode(userDto.getPassword()));
+                ps.setString(9, userDto.getCity());
+                ps.setString(10, userDto.getCountry());
+                ps.setString(11, userDto.getAddress());
+                ps.setString(12, userDto.getPhone());
                 ps.executeUpdate();
 
                 preparedStatement = connection.prepareStatement(insertIntoEmailVerificationTokens);
                 preparedStatement.executeUpdate();
 
-                emailHandler.sendEmail(request.getEmail(),Constants.verifyEmailSubject,htmlBody);
+                emailHandler.sendEmail(userDto.getEmail(),Constants.verifyEmailSubject,htmlBody);
 
                 connection.commit();
                 return new ResponseDto(Constants.verifyEmailMessage,null,true);
@@ -138,7 +135,12 @@ public class AuthenticationController {
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            connection.rollback();
+            try {
+                connection.rollback();
+            } catch (SQLException e) {
+                emailHandler.sendErrorEmail(Constants.exceptionSubject, e.getMessage());
+                throw new RuntimeException(e);
+            }
             return new ResponseDto(Constants.errorMessage,null,false);
         } finally {
             try {
@@ -151,12 +153,10 @@ public class AuthenticationController {
         }
     }
 
-    @GetMapping(value = "/public/verifyemail")
-    public ResponseDto verifyEmail(@RequestParam(value = "token") String token,@RequestParam(value = "email")String email){
-
+    @Override
+    public ResponseDto verifyEmail(String oneTimeToken, String email) {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
 
         try{
             connection = postgresQlConfig.getConnection();
@@ -164,7 +164,7 @@ public class AuthenticationController {
             connection.setAutoCommit(false);
             String updateTokenStatus = QueryUtil.getVerifyEmailQuery();
             preparedStatement = connection.prepareStatement(updateTokenStatus);
-            preparedStatement.setString(1,token);
+            preparedStatement.setString(1,oneTimeToken);
             int rowUpdates = preparedStatement.executeUpdate();
 
             if(rowUpdates > 0){
@@ -187,7 +187,16 @@ public class AuthenticationController {
             }
             return new ResponseDto(Constants.errorMessage,null,false);
         }
+        finally {
+            try {
+                if(connection!=null)
+                    connection.close();
+            }
+            catch (Exception ex){
+                ex.printStackTrace();
+                emailHandler.sendErrorEmail(Constants.exceptionSubject, ex.getMessage());
+            }
+        }
         return new ResponseDto(Constants.successMessage,null,true);
     }
-
 }

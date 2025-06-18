@@ -62,7 +62,8 @@ public class QueryUtil {
         return "update public.email_verification_tokens \n" +
                 "set is_used = true , verified_at  = current_timestamp \n" +
                 "where \"token\"  = ?\n" +
-                "and expires_at > current_timestamp ";
+                "and expires_at > current_timestamp " +
+                "and is_used = false ";
     }
 
     public static String getActivateUserQuery(){

@@ -4,7 +4,10 @@ import com.example.stayfit.aws.EmailHandler;
 import com.example.stayfit.dbconfig.PostgresQlConfig;
 import com.example.stayfit.utility.Constants;
 import com.example.stayfit.utility.QueryUtil;
+import com.example.stayfit.utility.UserRole;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -45,8 +48,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             if(resultSet.next()){
                 String userName = resultSet.getString(1);
                 String password = resultSet.getString(2);
-                // You can return roles too — using Collections.singleton() for now
-                return new User(userName, password, Collections.emptyList());
+                GrantedAuthority role = new SimpleGrantedAuthority(Integer.valueOf(resultSet.getInt(3)).toString());
+                return new User(userName, password, Collections.singleton(role));
             }
             else {
                 throw new UsernameNotFoundException("User not found with email: " + username);

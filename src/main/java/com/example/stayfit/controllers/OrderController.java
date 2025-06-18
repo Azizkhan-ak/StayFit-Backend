@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(value = "order.json")
+@RequestMapping(value = "/api/public/order.json")
 @Slf4j
 @CrossOrigin("http://localhost:5173")
 public class OrderController {

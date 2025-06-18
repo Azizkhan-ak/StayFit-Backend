@@ -18,9 +18,10 @@ public class JwtUtil {
     @Value("${jwt-expiry}")
     private String EXPIRATION_TIME; // 1 hour
 
-    public String generateToken(String username) {
+    public String generateToken(String username,String role) {
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role",role)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + Long.valueOf(EXPIRATION_TIME)))
                 .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()), SignatureAlgorithm.HS256)
