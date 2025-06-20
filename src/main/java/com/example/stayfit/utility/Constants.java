@@ -19,4 +19,6 @@ public class Constants {
     public static final String goToSignIn = "User already exists, please signIn!";
 
     public static final String verifyEmailMessage = "Registration successfull! An Email has been sent for verification, Please verify!";
+
+    public static final String databaseConnectionError = "unable to obtain database connection!";
 }
