@@ -42,4 +42,20 @@ public class AdminController {
         }
         return responseDto;
     }
+
+    @DeleteMapping(value = "/inventory/delete")
+    public ResponseDto deleteInventoryItem(
+            @RequestHeader(value = "Authorization") String token,
+            @RequestParam(value = "itemId") Integer id
+    ){
+        ResponseDto responseDto = null;
+        try{
+            responseDto = adminService.deleteInventoryItem(token,id);
+        }catch (Exception ex){
+            ex.printStackTrace();
+            emailHandler.sendErrorEmail(Constants.exceptionSubject,ex.getMessage());
+            return new ResponseDto(Constants.errorMessage,null,true);
+        }
+        return responseDto;
+    }
 }

@@ -12,7 +12,7 @@ import java.util.List;
 public class QueryUtil {
 
     public static String getAllProductsQuery(Integer category){
-        StringBuilder query = new StringBuilder("select ID,UPPER(replace(NAME,'_',' ')) ,description ,status ,category ,price ,discount_in_percent ,items_in_stock ,s3_url from public.products p where status !=0 ");
+        StringBuilder query = new StringBuilder("select ID,UPPER(replace(NAME,'_',' ')) ,description ,status ,category ,price ,discount_in_percent ,items_in_stock ,s3_url from public.products p where status = 1 ");
         if(category!=null && category.intValue()!=0){
             query.append(" and category = ").append(category);
         }
@@ -68,6 +68,10 @@ public class QueryUtil {
 
     public static String getActivateUserQuery(){
         return "update public.users set status = ? where email = ? and status != ?";
+    }
+
+    public static String getDeleteInventoryProductByIdQuery(){
+        return "update public.products set status = ?, modified_at = ? where id = ? ";
     }
 
 }

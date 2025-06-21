@@ -6,14 +6,12 @@ import com.example.stayfit.dtos.Product;
 import com.example.stayfit.dtos.ResponseDto;
 import com.example.stayfit.services.AdminService;
 import com.example.stayfit.utility.Constants;
+import com.example.stayfit.utility.ProductStatus;
 import com.example.stayfit.utility.QueryUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,6 +73,46 @@ public class AdminServiceImpl implements AdminService {
             }catch (Exception ex){
                 ex.printStackTrace();
                 emailHandler.sendErrorEmail(Constants.exceptionSubject,ex.getMessage());
+            }
+        }
+        return responseDto;
+    }
+
+    public ResponseDto deleteInventoryItem(String token,Integer itemId){
+        ResponseDto responseDto = null;
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+
+        try{
+            if(itemId == null || itemId<0){
+                return new ResponseDto(Constants.errorMessage,null,false);
+            }
+
+            connection = postgresQlConfig.getConnection();
+            if(connection == null){
+                return new ResponseDto(Constants.errorMessage,null,false);
+            }
+
+            String deleteQuery = QueryUtil.getDeleteInventoryProductByIdQuery();
+            preparedStatement = connection.prepareStatement(deleteQuery);
+            preparedStatement.setInt(1, ProductStatus.DELETED.getCode());
+            preparedStatement.setTimestamp(2,new Timestamp(System.currentTimeMillis()));
+            preparedStatement.setInt(3,itemId);
+            preparedStatement.executeUpdate();
+            responseDto = new ResponseDto(Constants.successMessage,null,true);
+
+        }catch (Exception ex){
+            ex.printStackTrace();
+            emailHandler.sendErrorEmail(Constants.exceptionSubject,ex.getMessage());
+            new ResponseDto(Constants.errorMessage,null,false);
+        }
+        finally {
+            try{
+                if(preparedStatement!=null) preparedStatement.close();
+                if(connection!=null) connection.close();
+            }catch (Exception ex){
+                ex.printStackTrace();
+                emailHandler.sendErrorEmail(Constants.exceptionSubject,Constants.unableToObtainConnection);
             }
         }
         return responseDto;
