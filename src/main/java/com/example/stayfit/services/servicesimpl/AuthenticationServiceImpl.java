@@ -199,4 +199,108 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
         return new ResponseDto(Constants.successMessage,null,true);
     }
+
+    public ResponseDto passwordReset(String token,String password){
+
+        ResponseDto responseDto = null;
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+
+        try{
+            connection = postgresQlConfig.getConnection();
+
+            if(connection == null){
+                emailHandler.sendErrorEmail(Constants.databaseConnectionError,Constants.databaseConnectionError);
+                return new ResponseDto(Constants.errorMessage,null,false);
+            }
+
+            preparedStatement = connection.prepareStatement(QueryUtil.getUserAssociatedWithTokenQuery());
+            preparedStatement.setString(1,token);
+            resultSet = preparedStatement.executeQuery();
+            String email = "";
+
+            if(resultSet.next()){
+                email = resultSet.getString(1);
+                String passwordResetQuery = QueryUtil.getUserPasswordResetQuery();
+                preparedStatement = connection.prepareStatement(passwordResetQuery);
+
+                preparedStatement.setString(1,passwordEncoder.encode(password));
+                preparedStatement.setString(2,email);
+                preparedStatement.setInt(3,UserStatus.DELETED.getCode());
+                int result = preparedStatement.executeUpdate();
+
+                preparedStatement = connection.prepareStatement(QueryUtil.getMakePasswordResetTokenAsUsed());
+                preparedStatement.setBoolean(1,true);
+                preparedStatement.setString(2,token);
+                preparedStatement.executeUpdate();
+
+                if(result != 1){
+                    emailHandler.sendErrorEmail(Constants.errorMessage,Constants.errorMessage);
+                    return new ResponseDto(Constants.errorMessage,null,false);
+                }
+
+                responseDto = new ResponseDto(Constants.successMessage,null,true);
+            }
+            else{
+                return new ResponseDto(Constants.tokenExpired,null,false);
+            }
+
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
+        return responseDto;
+    }
+
+    public ResponseDto sendPasswordResetEmail(String email){
+
+        ResponseDto responseDto = null;
+        Connection connection = null;
+        PreparedStatement statement = null;
+
+        try{
+
+            connection = postgresQlConfig.getConnection();
+            if(connection == null){
+                emailHandler.sendErrorEmail(Constants.databaseConnectionError,Constants.unableToObtainConnection);
+            }
+
+            String uuid = UUID.randomUUID().toString();
+            String insertQuery = QueryUtil.getInsertOneTimeTokenQueryForPasswordReset();
+
+            statement = connection.prepareStatement(insertQuery);
+            statement.setString(1,uuid);
+            statement.setString(2,email);
+            int result = statement.executeUpdate();
+
+            if(result != 1){
+                emailHandler.sendErrorEmail(Constants.errorMessage,Constants.errorMessage);
+                return new ResponseDto(Constants.errorMessage,null,false);
+            }
+
+            String resetLink = "http://localhost:5173/resetPassword?token=" + uuid;
+
+            String emailStr = "<p>Dear User,</p>"
+                    + "<p>We received a request to reset your password. Click the link below to reset it:</p>"
+                    + "<p><a href=\"" + resetLink + "\">Reset Password</a></p>"
+                    + "<p>If you did not request this, you can safely ignore this email.</p>"
+                    + "<p>Regards,<br>StayFit Support Team</p>";
+
+            emailHandler.sendEmail(email,"Password Reset",emailStr);
+            responseDto = new ResponseDto(Constants.successMessage,null,true);
+        }catch (Exception ex){
+            ex.printStackTrace();
+            emailHandler.sendErrorEmail(Constants.exceptionSubject,ex.getMessage());
+            return new ResponseDto(Constants.errorMessage,null,false);
+        }
+        finally {
+            try{
+                if(statement!=null)statement.close();
+                if(connection!=null)connection.close();
+            }catch (Exception ex){
+                ex.printStackTrace();
+            }
+        }
+        return responseDto;
+    }
 }

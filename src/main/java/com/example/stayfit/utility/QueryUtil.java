@@ -74,4 +74,21 @@ public class QueryUtil {
         return "update public.products set status = ?, modified_at = ? where id = ? ";
     }
 
+    public static String getInsertOneTimeTokenQueryForPasswordReset(){
+        return "insert into public.password_reset_token (token,email)values(?,?); ";
+    }
+
+    public static String getUserAssociatedWithTokenQuery(){
+        return "SELECT email from public.password_reset_token where token = ? and created_at between current_timestamp - interval '1 hour' and current_timestamp " +
+                "and is_used = false ";
+    }
+
+    public static String getUserPasswordResetQuery(){
+        return "update public.users set password = ? where email = ? and status != ? ";
+    }
+
+    public static String getMakePasswordResetTokenAsUsed(){
+        return "update public.password_reset_token set is_used = ? where token = ?  ";
+    }
+
 }

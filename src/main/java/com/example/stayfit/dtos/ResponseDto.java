@@ -5,8 +5,6 @@ public class ResponseDto {
     private Object content;
     private Boolean isSuccessful;
 
-    public ResponseDto(){}
-
     public ResponseDto(String message, Object content, Boolean isSuccessful) {
         this.message = message;
         this.content = content;

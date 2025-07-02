@@ -51,6 +51,30 @@ public class AuthenticationController {
         }
     }
 
+    @GetMapping(value = "/passwordResetEmail")
+    public ResponseDto passwordResetEmail(@RequestParam(value = "email")String email){
+        ResponseDto responseDto = null;
+        try{
+            responseDto = authenticate.sendPasswordResetEmail(email);
+            return responseDto;
+        }catch (Exception ex){
+            emailHandler.sendErrorEmail(Constants.exceptionSubject, ex.getMessage());
+            return new ResponseDto(Constants.errorMessage,null,false);
+        }
+    }
+
+    @GetMapping(value = "/passwordReset")
+    public ResponseDto passwordReset(@RequestParam(value = "token")String token,@RequestParam(value = "password") String password){
+        ResponseDto responseDto = null;
+        try{
+            responseDto = authenticate.passwordReset(token,password);
+            return responseDto;
+        }catch (Exception ex){
+            emailHandler.sendErrorEmail(Constants.exceptionSubject, ex.getMessage());
+            return new ResponseDto(Constants.errorMessage,null,false);
+        }
+    }
+
     @GetMapping(value = "/verifyemail")
     public ResponseDto verifyEmail(@RequestParam(value = "token") String token,@RequestParam(value = "email")String email){
         ResponseDto responseDto = null;

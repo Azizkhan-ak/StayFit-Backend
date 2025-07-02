@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RequestMapping(value = "admin.json")
 @CrossOrigin(
-        origins = "http://localhost:5173",
-        allowedHeaders = {"Authorization", "Content-Type"},
-        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS},
-        exposedHeaders = "Authorization"
+        origins = "*",
+        allowedHeaders = {"*"},
+        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.DELETE,RequestMethod.OPTIONS},
+        allowCredentials = "false"
 )
 public class AdminController {
 
@@ -43,7 +43,7 @@ public class AdminController {
         return responseDto;
     }
 
-    @DeleteMapping(value = "/inventory/delete")
+    @PostMapping(value = "/inventory/delete")
     public ResponseDto deleteInventoryItem(
             @RequestHeader(value = "Authorization") String token,
             @RequestParam(value = "itemId") Integer id

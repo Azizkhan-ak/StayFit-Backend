@@ -21,4 +21,6 @@ public class Constants {
     public static final String verifyEmailMessage = "Registration successfull! An Email has been sent for verification, Please verify!";
 
     public static final String databaseConnectionError = "unable to obtain database connection!";
+
+    public static final String tokenExpired = "One time token has been expired, or user does not exist. Please reset password!";
 }
