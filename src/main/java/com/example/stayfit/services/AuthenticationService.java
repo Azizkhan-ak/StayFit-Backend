@@ -6,6 +6,8 @@ import com.example.stayfit.dtos.UserDto;
 public interface AuthenticationService {
     public ResponseDto login(UserDto userDto);
     public ResponseDto register(UserDto userDto);
+
+    public ResponseDto registerOAuth(String googleToken);
     public ResponseDto verifyEmail(String oneTimeToken,String email);
 
     public ResponseDto sendPasswordResetEmail(String email);

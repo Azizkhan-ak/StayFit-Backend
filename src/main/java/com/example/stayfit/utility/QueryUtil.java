@@ -50,8 +50,13 @@ public class QueryUtil {
         return "SELECT id,email,status,first_name from public.users where email = '"+email+"' and status !=6 ";
     }
 
-    public static String getUserByEmailQuery(String email){
-        return "SELECT EMAIL,PASSWORD,ROLE FROM public.users where email = '"+email.trim().replaceAll("'","''")+"' and status = "+UserStatus.ACTIVE.getCode();
+    public static String getUserByEmailQuery(){
+        return "SELECT EMAIL,PASSWORD,ROLE FROM public.users where email = ? and status = ?";
+    }
+
+    public static String getUserInsertQuery(){
+        return "insert into public.users (id,created_at,status,modified_at,role,first_name,last_name,email,password,city,country,delivery_address,phone,auth_provider) " +
+                "VALUES (nextval('users_id_seq'),?,?,?,?,?,?,?,?,?,?,?,?,?) ";
     }
 
     public static String getInsertIntoEmailVerificationQuery(String email,String token){

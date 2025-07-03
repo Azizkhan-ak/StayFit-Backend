@@ -43,7 +43,19 @@ public class AuthenticationController {
     public ResponseDto register(@Valid @RequestBody UserDto request) throws Exception {
         ResponseDto responseDto = null;
         try{
-            responseDto = authenticate.register(new UserDto());
+            responseDto = authenticate.register(request);
+            return responseDto;
+        }catch (Exception e){
+            emailHandler.sendErrorEmail(Constants.exceptionSubject, e.getMessage());
+            return new ResponseDto(Constants.errorMessage,null,false);
+        }
+    }
+
+    @PostMapping("/registerOAuth")
+    public ResponseDto registerOAuth(@RequestBody String googleToken) throws Exception {
+        ResponseDto responseDto = null;
+        try{
+            responseDto = authenticate.registerOAuth(googleToken);
             return responseDto;
         }catch (Exception e){
             emailHandler.sendErrorEmail(Constants.exceptionSubject, e.getMessage());

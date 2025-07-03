@@ -5,6 +5,7 @@ import com.example.stayfit.dbconfig.PostgresQlConfig;
 import com.example.stayfit.utility.Constants;
 import com.example.stayfit.utility.QueryUtil;
 import com.example.stayfit.utility.UserRole;
+import com.example.stayfit.utility.UserStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,6 +16,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Collections;
@@ -35,15 +37,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
         Connection connection = null;
-        Statement statement = null;
+        PreparedStatement statement = null;
         ResultSet resultSet = null;
 
         try{
             connection = postgresQlConfig.getConnection();
-            statement = connection.createStatement();
-
-            String queryToUserByEmail = QueryUtil.getUserByEmailQuery(username);
-            resultSet = statement.executeQuery(queryToUserByEmail);
+            String queryToUserByEmail = QueryUtil.getUserByEmailQuery();
+            statement = connection.prepareStatement(queryToUserByEmail);
+            statement.setString(1,username);
+            statement.setInt(2, UserStatus.ACTIVE.getCode());
+            resultSet = statement.executeQuery();
 
             if(resultSet.next()){
                 String userName = resultSet.getString(1);

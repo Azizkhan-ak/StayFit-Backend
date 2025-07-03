@@ -7,6 +7,10 @@ import com.example.stayfit.dtos.UserDto;
 import com.example.stayfit.security.JwtUtil;
 import com.example.stayfit.services.AuthenticationService;
 import com.example.stayfit.utility.*;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +18,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -108,8 +114,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             }
 
             else{
-                PreparedStatement ps = connection.prepareStatement("insert into public.users (id,created_at,status,modified_at,role,first_name,last_name,email,password,city,country,delivery_address,phone) " +
-                        "VALUES (nextval('users_id_seq'),?,?,?,?,?,?,?,?,?,?,?,?) ");
+                PreparedStatement ps = connection.prepareStatement(QueryUtil.getUserInsertQuery());
                 ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
                 ps.setInt(2, UserStatus.INACTIVE.getCode());
                 ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
@@ -122,6 +127,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 ps.setString(10, userDto.getCountry());
                 ps.setString(11, userDto.getAddress());
                 ps.setString(12, userDto.getPhone());
+                ps.setInt(13,AuthProvider.LOCAL_AUTH.getCode());
                 ps.executeUpdate();
 
                 preparedStatement = connection.prepareStatement(insertIntoEmailVerificationTokens);
@@ -302,5 +308,75 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             }
         }
         return responseDto;
+    }
+
+    public ResponseDto registerOAuth(String token){
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+        try{
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    GoogleNetHttpTransport.newTrustedTransport(),
+                    JacksonFactory.getDefaultInstance()
+            )
+                    .setAudience(Collections.singletonList("809742363195-7med73ik08h4cmsee308a1io8abtfur4.apps.googleusercontent.com")) // Your frontend client_id
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(token);
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+                connection = postgresQlConfig.getConnection();
+
+                String email = payload.getEmail();
+                String firstName = (String) payload.get("given_name");
+                String lastName = (String) payload.get("family_name");
+                boolean emailVerified = Boolean.valueOf(payload.getEmailVerified().toString());
+                if(emailVerified){
+                    // check if user with this email already exists, we dont do anything , just return jwt.
+                    //else we create a new user with email, with random uuid as password
+                    String queryToUserByEmail = QueryUtil.getUserByEmailQuery();
+                    statement = connection.prepareStatement(queryToUserByEmail);
+                    statement.setString(1,email);
+                    statement.setInt(2, UserStatus.ACTIVE.getCode());
+                    resultSet = statement.executeQuery();
+
+                    if(resultSet.next()){
+                        Integer role = resultSet.getInt(3);
+                        String userGeneratedToken = jwtUtil.generateToken(email,role.toString());
+                        return new ResponseDto(Constants.successMessage,userGeneratedToken,true);
+                    }
+                    else{
+                        statement = connection.prepareStatement(QueryUtil.getUserInsertQuery());
+                        statement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                        statement.setInt(2, UserStatus.ACTIVE.getCode());
+                        statement.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+                        statement.setInt(4, UserRole.CUSTOMER.getCode()); // 0 role for customer
+                        statement.setString(5, firstName);
+                        statement.setString(6, lastName);
+                        statement.setString(7, email);
+                        statement.setString(8, passwordEncoder.encode(UUID.randomUUID().toString()));
+                        statement.setString(9, "unknown");
+                        statement.setString(10, "unknown");
+                        statement.setString(11, "unknown");
+                        statement.setString(12, "unknown");
+                        statement.setInt(13,AuthProvider.GOOGLE_AUTH.getCode());
+                        statement.executeUpdate();
+
+                        Integer role = UserRole.CUSTOMER.getCode();
+                        String userGeneratedToken = jwtUtil.generateToken(email,role.toString());
+                        return new ResponseDto(Constants.successMessage,userGeneratedToken,true);
+                    }
+                }
+                else{
+                    return new ResponseDto(Constants.errorMessage,null,false);
+                }
+            } else {
+                return new ResponseDto(Constants.errorMessage,null,false);
+            }
+        }catch (Exception ex){
+            ex.printStackTrace();
+            return new ResponseDto(Constants.errorMessage,null,false);
+        }
     }
 }
