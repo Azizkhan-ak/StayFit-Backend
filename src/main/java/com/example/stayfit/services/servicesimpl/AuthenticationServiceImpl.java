@@ -18,8 +18,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -149,13 +147,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             }
             return new ResponseDto(Constants.errorMessage,null,false);
         } finally {
-            try {
-                if(connection!=null)
-                    connection.close();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                emailHandler.sendErrorEmail(Constants.exceptionSubject, ex.getMessage());
-            }
+           postgresQlConfig.closeResources(connection,preparedStatement,null,resultSet);
         }
     }
 
@@ -194,14 +186,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return new ResponseDto(Constants.errorMessage,null,false);
         }
         finally {
-            try {
-                if(connection!=null)
-                    connection.close();
-            }
-            catch (Exception ex){
-                ex.printStackTrace();
-                emailHandler.sendErrorEmail(Constants.exceptionSubject, ex.getMessage());
-            }
+            postgresQlConfig.closeResources(connection,preparedStatement,null,null);
         }
         return new ResponseDto(Constants.successMessage,null,true);
     }
@@ -255,6 +240,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }catch (Exception ex){
             ex.printStackTrace();
         }
+        finally {
+            postgresQlConfig.closeResources(connection,preparedStatement,null,resultSet);
+        }
         return responseDto;
     }
 
@@ -300,12 +288,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return new ResponseDto(Constants.errorMessage,null,false);
         }
         finally {
-            try{
-                if(statement!=null)statement.close();
-                if(connection!=null)connection.close();
-            }catch (Exception ex){
-                ex.printStackTrace();
-            }
+            postgresQlConfig.closeResources(connection,null,statement,null);
         }
         return responseDto;
     }
@@ -377,6 +360,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }catch (Exception ex){
             ex.printStackTrace();
             return new ResponseDto(Constants.errorMessage,null,false);
+        }
+        finally {
+           postgresQlConfig.closeResources(connection,null,statement,resultSet);
         }
     }
 }
